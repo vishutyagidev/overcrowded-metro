@@ -40,7 +40,7 @@ While we don't directly combat climate change ourselves, our project enables tho
 
   - The resulting 3D models are superimposed and refined automatically.
 
-### 3. Real-Time Interactive 3D Viewer
+### 🧊 3. Real-Time Interactive 3D Viewer
 
 - Continuously updated and rendered directly in your browser.
 
