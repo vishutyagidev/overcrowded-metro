@@ -82,7 +82,14 @@ The generator workflow functions using the following steps:
 
 ## Visualization Dashboard - MeshProphet
 
-// TODO @twinbladeRoG
+Our web-based 3D model visualizer to refine and interact with the environment:
+
+- MeshProphet loads the 3D Model from cloud.
+
+- It then loads the model using ThreeJS to render the model in the browser canvas.
+
+- Prompt the model generator for refining the 3D Model
+
 
 ## Join Us on This Mission
 
