@@ -1,0 +1,33 @@
+gitignore
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.gradle/
+build/
+local.properties
+
+# Android Studio captures and profiling files
+*.hprof
+*.capture
+
+# Keystore files
+*.jks
+*.keystore
+
+# Google services
+app/google-services.json
+
+# Maven local repository
+.m2/
+
+# Gradle build cache
+.gradle-build-cache/
+
+# Android Studio log files
+*.log
+
+# Misc
+captures/
+output/
