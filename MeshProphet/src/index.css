@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Jura:wght@300..700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Jura", sans-serif;
+
+  --color-primary-50: #f4eefe;
+  --color-primary-100: #ece1fd;
+  --color-primary-200: #d9c2fb;
+  --color-primary-300: #c69ff8;
+  --color-primary-400: #b77ef6;
+  --color-primary-500: #a959f3;
+  --color-primary-600: #9929ea;
+  --color-primary-700: #721cb0;
+  --color-primary-800: #4f117c;
+  --color-primary-900: #2f064c;
+  --color-primary-950: #200337;
+
+  --color-secondary-50: #f8edfa;
+  --color-secondary-100: #f2dbf6;
+  --color-secondary-200: #e5b7ed;
+  --color-secondary-300: #d992e4;
+  --color-secondary-400: #cc66da;
+  --color-secondary-500: #ac4db9;
+  --color-secondary-600: #8d3e97;
+  --color-secondary-700: #6b2d73;
+  --color-secondary-800: #4b1d51;
+  --color-secondary-900: #2d0f31;
+  --color-secondary-950: #1e0821;
+
+  --color-accent-50: #fcf4cd;
+  --color-accent-100: #faeb92;
+  --color-accent-200: #ddce6a;
+  --color-accent-300: #bfb25b;
+  --color-accent-400: #a3974c;
+  --color-accent-500: #847a3c;
+  --color-accent-600: #69612f;
+  --color-accent-700: #504a22;
+  --color-accent-800: #383315;
+  --color-accent-900: #1f1c09;
+  --color-accent-950: #131104;
+}
+
+.bg-cross-mesh {
+  background-color: #e5e5f7;
+  opacity: 0.8;
+  background: radial-gradient(circle, transparent 20%, #ece1fd 20%, #ece1fd 80%, transparent 80%, transparent), radial-gradient(circle, transparent 20%, #ece1fd 20%, #ece1fd 80%, transparent 80%, transparent) 25px 25px, linear-gradient(#444cf7 2px, transparent 2px) 0 -1px, linear-gradient(90deg, #444cf7 2px, #ece1fd 2px) -1px 0;
+  background-size: 50px 50px, 50px 50px, 25px 25px, 25px 25px;
+}
