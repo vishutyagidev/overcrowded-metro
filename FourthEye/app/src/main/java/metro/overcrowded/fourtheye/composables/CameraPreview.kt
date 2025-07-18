@@ -136,7 +136,8 @@ fun CameraPreviewScreen() {
                         IconButton(
                             onClick = {
                                 capturedBitmap.value?.let { bitmap ->
-                                    processFrame(context, bitmap, strokes)
+                                    val maskImage = generateMaskBitmap(bitmap.width, bitmap.height, strokes)
+                                    processFrame(context, bitmap, maskImage)
                                 }
                                 capturedBitmap.value = null
                                 strokes.clear()
@@ -260,7 +261,7 @@ private fun generateMaskBitmap(width: Int, height: Int, strokes: List<Stroke>): 
     return bitmap
 }
 
-private fun processFrame(context: Context, rawImage: Bitmap, strokes: List<Stroke>) {
+private fun processFrame(context: Context, rawImage: Bitmap, maskImage: Bitmap) {
     val filename = "$filePrefix$fileExtension"
     val maskFilename = "$filePrefix-$fileMaskSuffix$fileExtension"
 
@@ -269,8 +270,8 @@ private fun processFrame(context: Context, rawImage: Bitmap, strokes: List<Strok
         val rawFile = FileUtils.saveBitmapToFile(context, rawImage, filename)
         S3Uploader.uploadFile(context, rawFile, filename)
 
-        val maskBitmap = generateMaskBitmap(rawImage.width, rawImage.height, strokes)
-        val maskFile = FileUtils.saveBitmapToFile(context, maskBitmap, maskFilename)
+
+        val maskFile = FileUtils.saveBitmapToFile(context, maskImage, maskFilename)
         S3Uploader.uploadFile(context, maskFile, maskFilename)
 
         val jsonString = buildMetadataJson(context)
