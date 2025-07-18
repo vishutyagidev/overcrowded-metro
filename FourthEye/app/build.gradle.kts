@@ -64,6 +64,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
     implementation("com.amazonaws:aws-android-sdk-s3:2.70.+")
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("com.squareup.okhttp3:okhttp:5.1.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -3,6 +3,7 @@ package metro.overcrowded.fourtheye.composables
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
@@ -56,12 +57,18 @@ import org.json.JSONObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import androidx.core.graphics.createBitmap
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 
 const val filePrefix = "image"
 const val fileExtension = ".png"
 const val fileMaskSuffix = "mask"
 const val fileMetaName = "metadata"
 const val canvasStrokeWidth = 64f
+const val startWorkflowHostname = "http://darkstar:8000"
+const val startWorkflowEndpoint = "generate"
 
 @Composable
 fun CameraPreviewScreen() {
@@ -136,7 +143,9 @@ fun CameraPreviewScreen() {
                         IconButton(
                             onClick = {
                                 capturedBitmap.value?.let { bitmap ->
-                                    val maskImage = generateMaskBitmap(bitmap.width, bitmap.height, strokes)
+                                    val maskImage = generateMaskBitmap(
+                                        bitmap.width, bitmap.height, strokes
+                                    )
                                     processFrame(context, bitmap, maskImage)
                                 }
                                 capturedBitmap.value = null
@@ -264,23 +273,55 @@ private fun generateMaskBitmap(width: Int, height: Int, strokes: List<Stroke>): 
 private fun processFrame(context: Context, rawImage: Bitmap, maskImage: Bitmap) {
     val filename = "$filePrefix$fileExtension"
     val maskFilename = "$filePrefix-$fileMaskSuffix$fileExtension"
+    val metaFilename = fileMetaName
 
     // async
     CoroutineScope(Dispatchers.IO).launch {
         val rawFile = FileUtils.saveBitmapToFile(context, rawImage, filename)
         S3Uploader.uploadFile(context, rawFile, filename)
 
-
         val maskFile = FileUtils.saveBitmapToFile(context, maskImage, maskFilename)
         S3Uploader.uploadFile(context, maskFile, maskFilename)
 
         val jsonString = buildMetadataJson(context)
-        val metadataFile = FileUtils.saveTextToFile(context, fileMetaName, jsonString)
-        S3Uploader.uploadFile(context, metadataFile, fileMetaName)
+        val metadataFile = FileUtils.saveTextToFile(context, metaFilename, jsonString)
+        S3Uploader.uploadFile(context, metadataFile, metaFilename)
+
+        postUploadApiCall(filename, maskFilename, metaFilename)
 
         withContext(Dispatchers.Main) {
             Toast.makeText(context, "Uploaded the files successfully", Toast.LENGTH_SHORT).show()
         }
+    }
+}
+
+private fun postUploadApiCall(
+    rawFileName: String,
+    maskFileName: String,
+    metaFileName: String
+) {
+    val client = OkHttpClient()
+
+    val json = JSONObject().apply {
+        put("image", rawFileName)
+        put("mask", maskFileName)
+        put("metadata", metaFileName)
+    }.toString()
+
+    val requestBody = json.toRequestBody("application/json".toMediaTypeOrNull())
+
+    val request = Request.Builder()
+        .url("${startWorkflowHostname}/${startWorkflowEndpoint}")
+        .post(requestBody)
+        .build()
+
+    try {
+        val response = client.newCall(request).execute()
+        if (!response.isSuccessful) {
+            Log.e("HTTPError", "HTTP Error: ${response.code}")
+        }
+    } catch (e: Exception) {
+        Log.e("HTTPError", "HTTP Error: ${e.localizedMessage}")
     }
 }
 
