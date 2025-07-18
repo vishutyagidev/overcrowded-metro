@@ -1,5 +1,7 @@
 # Omnislash
 
+> [Team : overcrowded-metro]
+
 Welcome to Omnislash - a project born with a simple vision: we're not the climate heroes, but you can be one of them.
 
 Accurate 3D models of landscapes are often locked behind corporate paywalls or simply not available at all. We're changing that. Omnislash gives everyone - from scientists and civil planners to educators and indie hackers - the power to easily generate, refine, and use high-quality 3D terrain models... all for free, and all locally. No strings attached.
