@@ -61,6 +61,9 @@ dependencies {
     implementation (libs.androidx.camera.view)
     implementation (libs.androidx.camera.lifecycle)
 
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
+    implementation("com.amazonaws:aws-android-sdk-s3:2.70.+")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
