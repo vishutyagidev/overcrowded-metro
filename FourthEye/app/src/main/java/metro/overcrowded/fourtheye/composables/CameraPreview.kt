@@ -8,9 +8,11 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -27,12 +29,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -49,11 +55,13 @@ import metro.overcrowded.fourtheye.utils.SensorUtils
 import org.json.JSONObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import androidx.core.graphics.createBitmap
 
 const val filePrefix = "image"
 const val fileExtension = ".png"
 const val fileMaskSuffix = "mask"
 const val fileMetaName = "metadata"
+const val canvasStrokeWidth = 64f
 
 @Composable
 fun CameraPreviewScreen() {
@@ -65,6 +73,8 @@ fun CameraPreviewScreen() {
 
     val preview = remember { Preview.Builder().build() }
     val cameraSelector = remember { CameraSelector.Builder().requireLensFacing(lensFacing).build() }
+
+    val strokes = remember { mutableStateListOf<Stroke>() }
 
     val capturedBitmap = remember { mutableStateOf<Bitmap?>(null) }
     val isCapturing = capturedBitmap.value != null
@@ -86,6 +96,8 @@ fun CameraPreviewScreen() {
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
+
+            DrawingCanvas(strokes = strokes)
         } else {
             AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
         }
@@ -106,7 +118,10 @@ fun CameraPreviewScreen() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(
-                            onClick = { capturedBitmap.value = null }
+                            onClick = {
+                                capturedBitmap.value = null
+                                strokes.clear()
+                            }
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
@@ -121,9 +136,10 @@ fun CameraPreviewScreen() {
                         IconButton(
                             onClick = {
                                 capturedBitmap.value?.let { bitmap ->
-                                    processFrame(context, bitmap, bitmap)
+                                    processFrame(context, bitmap, strokes)
                                 }
                                 capturedBitmap.value = null
+                                strokes.clear()
                             }
                         ) {
                             Icon(
@@ -143,6 +159,56 @@ fun CameraPreviewScreen() {
                     }
                 })
             }
+        }
+    }
+}
+
+@Composable
+fun DrawingCanvas(strokes: MutableList<Stroke>) {
+    val currentPath = remember { Path() }
+    val isDrawing = remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = {
+                        isDrawing.value = true
+                        currentPath.moveTo(it.x, it.y)
+                    },
+                    onDrag = { change, dragAmount ->
+                        if (isDrawing.value) {
+                            currentPath.lineTo(change.position.x, change.position.y)
+                        }
+                    },
+                    onDragEnd = {
+                        if (isDrawing.value) {
+                            strokes.add(Stroke(path = Path().apply { addPath(currentPath) }))
+                            currentPath.reset()
+                            isDrawing.value = false
+                        }
+                    }
+                )
+            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            strokes.forEach { stroke ->
+                drawPath(
+                    path = stroke.path,
+                    color = stroke.color,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                        width = stroke.strokeWidth
+                    )
+                )
+            }
+
+            // Draw current in-progress path
+            drawPath(
+                path = currentPath,
+                color = Color.White,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = canvasStrokeWidth)
+            )
         }
     }
 }
@@ -170,7 +236,31 @@ fun ShutterButton(onClick: () -> Unit) {
     }
 }
 
-private fun processFrame(context: Context, rawImage: Bitmap, maskImage: Bitmap) {
+data class Stroke(val path: Path, val color: Color = Color.White, val strokeWidth: Float = canvasStrokeWidth)
+
+private fun generateMaskBitmap(width: Int, height: Int, strokes: List<Stroke>): Bitmap {
+    val bitmap = createBitmap(width, height)
+    val canvas = android.graphics.Canvas(bitmap)
+    canvas.drawColor(android.graphics.Color.BLACK) // Black background
+
+    val paint = android.graphics.Paint().apply {
+        color = android.graphics.Color.WHITE
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = canvasStrokeWidth
+        isAntiAlias = true
+    }
+
+    strokes.forEach { stroke ->
+        val androidPath = android.graphics.Path().apply {
+            stroke.path.asAndroidPath().let { set(it) }
+        }
+        canvas.drawPath(androidPath, paint)
+    }
+
+    return bitmap
+}
+
+private fun processFrame(context: Context, rawImage: Bitmap, strokes: List<Stroke>) {
     val filename = "$filePrefix$fileExtension"
     val maskFilename = "$filePrefix-$fileMaskSuffix$fileExtension"
 
@@ -179,7 +269,8 @@ private fun processFrame(context: Context, rawImage: Bitmap, maskImage: Bitmap) 
         val rawFile = FileUtils.saveBitmapToFile(context, rawImage, filename)
         S3Uploader.uploadFile(context, rawFile, filename)
 
-        val maskFile = FileUtils.saveBitmapToFile(context, maskImage, maskFilename)
+        val maskBitmap = generateMaskBitmap(rawImage.width, rawImage.height, strokes)
+        val maskFile = FileUtils.saveBitmapToFile(context, maskBitmap, maskFilename)
         S3Uploader.uploadFile(context, maskFile, maskFilename)
 
         val jsonString = buildMetadataJson(context)
