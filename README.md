@@ -1,10 +1,10 @@
 # Omnislash
 
-> [Team : overcrowded-metro]
+> [ Team : overcrowded-metro ]
 
 Welcome to Omnislash - a project born with a simple vision: we're not the climate heroes, but you can be one of them.
 
-Accurate 3D models of landscapes are often locked behind corporate paywalls or simply not available at all. We're changing that. Omnislash gives everyone - from scientists and civil planners to educators and indie hackers - the power to easily generate, refine, and use high-quality 3D terrain models... all for free, and all locally. No strings attached.
+Accurate 3D models of landscapes are often locked behind corporate paywalls or simply not available at all. We're changing that. Omnislash gives everyone - from scientists and civil planners to educators and indie hackers - the power to easily generate, refine, and use high-quality 3D terrain models, all for free, and all locally.
 
 ## ✨ Why This Matters
 
@@ -48,7 +48,7 @@ While we don't directly combat climate change ourselves, our project enables tho
 
 - All processing is done locally - no data leaves your machine. 🔒
 
-- When ready, export your model with one click to .obj format - fully open and portable.
+- When ready, export your model with one click to `.obj` and `.glb` format - fully open and portable.
 
 ### 💡 4. Simulate Real or Hypothetical Scenarios
 
