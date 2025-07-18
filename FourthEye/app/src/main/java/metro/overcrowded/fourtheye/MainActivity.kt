@@ -39,19 +39,38 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
     val cameraPermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
-    if (cameraPermissionState.status.isGranted) {
+    val locationPermissionState = rememberPermissionState(android.Manifest.permission.ACCESS_FINE_LOCATION)
+    val allPermissionsGranted =
+        cameraPermissionState.status.isGranted && locationPermissionState.status.isGranted
+
+
+    if (allPermissionsGranted) {
         CameraPreviewScreen()
     } else {
         Column(
             modifier = modifier.fillMaxSize().wrapContentSize().widthIn(max = 480.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val textToShow = "This app needs camera permissions to work ✨\n" +
-                    "We cannot take pictures without the camera :)"
+            val textToShow = buildString {
+                if (!cameraPermissionState.status.isGranted) {
+                    append("\uD83D\uDCF7 Camera permission is required to take pictures.\n")
+                }
+                if (!locationPermissionState.status.isGranted) {
+                    append("\uD83D\uDCCD Location permission is required to fetch your precise location.\n")
+                }
+            }
             Text(textToShow, textAlign = TextAlign.Center)
             Spacer(Modifier.height(16.dp))
-            Button(onClick = { cameraPermissionState.launchPermissionRequest() }) {
-                Text("Allow Camera")
+
+            Button(onClick = {
+                if (!cameraPermissionState.status.isGranted) {
+                    cameraPermissionState.launchPermissionRequest()
+                }
+                if (!locationPermissionState.status.isGranted) {
+                    locationPermissionState.launchPermissionRequest()
+                }
+            }) {
+                Text("Grant Permissions")
             }
         }
     }

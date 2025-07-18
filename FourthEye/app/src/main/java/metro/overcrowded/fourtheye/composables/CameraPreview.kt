@@ -3,6 +3,7 @@ package metro.overcrowded.fourtheye.composables
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -37,16 +38,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.getSystemService
-import androidx.core.content.getSystemService
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import metro.overcrowded.fourtheye.s3.S3Uploader
-import java.io.File
+import metro.overcrowded.fourtheye.utils.FileUtils
+import metro.overcrowded.fourtheye.utils.SensorUtils
+import org.json.JSONObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+
+const val filePrefix = "image"
+const val fileExtension = ".png"
+const val fileMaskSuffix = "mask"
+const val fileMetaName = "metadata"
 
 @Composable
 fun CameraPreviewScreen() {
@@ -92,7 +99,7 @@ fun CameraPreviewScreen() {
                 Box(
                     modifier = Modifier
                         .background(Color.White, shape = CircleShape)
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -114,7 +121,7 @@ fun CameraPreviewScreen() {
                         IconButton(
                             onClick = {
                                 capturedBitmap.value?.let { bitmap ->
-                                    processFrame(context, bitmap)
+                                    processFrame(context, bitmap, bitmap)
                                 }
                                 capturedBitmap.value = null
                             }
@@ -163,21 +170,39 @@ fun ShutterButton(onClick: () -> Unit) {
     }
 }
 
-private fun processFrame(context: Context, bitmap: Bitmap) {
-    val filename = "image.png"
+private fun processFrame(context: Context, rawImage: Bitmap, maskImage: Bitmap) {
+    val filename = "$filePrefix$fileExtension"
+    val maskFilename = "$filePrefix-$fileMaskSuffix$fileExtension"
 
+    // async
     CoroutineScope(Dispatchers.IO).launch {
-        val file = saveBitmapToFile(context, bitmap, filename)
-        S3Uploader.uploadFile(context, file, filename)
+        val rawFile = FileUtils.saveBitmapToFile(context, rawImage, filename)
+        S3Uploader.uploadFile(context, rawFile, filename)
+
+        val maskFile = FileUtils.saveBitmapToFile(context, maskImage, maskFilename)
+        S3Uploader.uploadFile(context, maskFile, maskFilename)
+
+        val jsonString = buildMetadataJson(context)
+        val metadataFile = FileUtils.saveTextToFile(context, fileMetaName, jsonString)
+        S3Uploader.uploadFile(context, metadataFile, fileMetaName)
+
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Uploaded the files successfully", Toast.LENGTH_SHORT).show()
+        }
     }
 }
 
-private fun saveBitmapToFile(context: Context, bitmap: Bitmap, filename: String): File {
-    val file = File(context.cacheDir, filename)
-    file.outputStream().use {
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+suspend fun buildMetadataJson(context: Context): String {
+    val location = SensorUtils.fetchCurrentLocation(context)
+    val direction = SensorUtils.fetchDeviceDirection(context)
+
+    val json = JSONObject().apply {
+        put("latitude", location?.latitude ?: 0.0)
+        put("longitude", location?.longitude ?: 0.0)
+        put("direction", direction)
     }
-    return file
+
+    return json.toString()
 }
 
 private suspend fun Context.getCameraProvider(): ProcessCameraProvider =
